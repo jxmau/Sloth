@@ -18,4 +18,6 @@ command | desc |
 `server new/n <filename> <port>` | Create a new 
 `server add/a <filename>  <name> <path> <method> <status?>` | Will add a new route at the end of the list. Default status is 200.
 `server list/l <filename>` | Return the list of Route on a table.
-
+`server delete/d <filename>` | Delete the Server file.
+`server delete_route/dr <filename> <od>` | Will delete the route.
+`server reorganize/rg <filename>` | Will reorganize the od of the Routes. Useful after deleting routes or modifying the file.

@@ -1,8 +1,10 @@
+use std::fs::remove_file;
+
 use log::error;
 use prettytable::{Table, row, format};
 use serde_json::from_str;
 use slothserver::{server::Server, route::Route};
-use crate::{load_file, save_file, does_file_exist, load_server, save_server};
+use crate::{load_file, save_file, does_file_exist, load_server, save_server, path_assembler};
 
 pub fn parse_server(pwd: String, vec: &mut Vec<String>) -> Result<(), String> {
     match vec.get(2) {
@@ -17,6 +19,12 @@ pub fn parse_server(pwd: String, vec: &mut Vec<String>) -> Result<(), String> {
                 "add" | "a" => add_route(&pwd, vec),
                 // sloth server list <path>
                 "list" | "l" => list(&pwd, vec.get_mut(3)),
+                // sloth server delete <path>
+                "delete" | "d" => delete_server(&pwd, vec.get_mut(3)),
+                // sloth serber delete_route <path> <od>
+                "delete_route" | "dr" => delete_route(&pwd, vec),
+                // sloth server reorganize <path>
+                "reorganize" | "rg" => reorganize(&pwd, vec),
                 _ => Err("Module Route hasn't been implemented yet.".to_string())
             }
         }
@@ -76,5 +84,45 @@ fn list(pwd: &str, path: Option<&mut String>)  -> Result<(), String> {
         table.add_row(row![r.order.unwrap_or(0), r.name, r.path, r.method, r.response.status, r.response.headers.len(), r.response.cookies.len() ]);
     }
     table.printstd();
+    Ok(())
+}
+
+fn delete_server(pwd: &str, path: Option<&mut String>) -> Result<(), String> {
+    let path = path_assembler(pwd, path)?;
+    match remove_file(path) {
+        Ok(_) =>   Ok(()),
+        Err(e) => {
+            error!(" Error when trying to delte the mock Server file : {e} ");
+            Err("Failed to delete Mock Server.".to_string())
+        },
+    }
+  
+}
+
+fn delete_route(pwd: &str, vec: &mut Vec<String>) -> Result<(), String> {
+    let mut server = load_server(pwd, vec.get_mut(3))?;
+    let od : u16 = match vec.get(4) {
+        Some(s) => match from_str(&s) {
+            Ok(s) => s,
+            Err(e) => {
+                error!(" Couldn't parse the od into u16 : {e}");
+                return Err("Invalid Route od.".to_string())
+            }
+        },
+        None => {
+            error!("Failed to find the od to delete");
+            return Err("Od of route couldn't be found.".to_string())
+        }
+    }; 
+
+    server.delete_route(od - 1);
+    save_server(&pwd, vec.get_mut(3), server)?;
+    Ok(())
+}
+
+fn reorganize(pwd: &str, vec: &mut Vec<String>) -> Result<(), String> {
+    let mut server = load_server(&pwd, vec.get_mut(3))?;
+    server.reorganize_routes();
+    save_server(&pwd, vec.get_mut(3), server)?;
     Ok(())
 }
